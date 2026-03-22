@@ -137,7 +137,7 @@ const ChatWindow = ({ chat, currentUser, messages, loading, onSend, onReact }: C
             onClick={send}
             disabled={!text.trim()}
             className="w-10 h-10 rounded-full flex items-center justify-center transition-all flex-shrink-0 disabled:opacity-40"
-            style={{ background: "hsl(var(--accent-cyan))", color: "hsl(var(--bg-deep))" }}
+            style={{ background: "hsl(var(--tit-blue))", color: "#fff" }}
           >
             <Icon name="Send" size={16} />
           </button>

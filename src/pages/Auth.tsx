@@ -36,14 +36,14 @@ const Auth = ({ onLogin }: AuthProps) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-deep">
+    <div className="min-h-screen flex items-center justify-center" style={{ background: "hsl(var(--bg-deep))" }}>
       <div className="w-full max-w-sm px-6">
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-elevated border border-normal mb-5 glow-cyan">
-            <Icon name="MessageCircle" size={36} className="accent-cyan" />
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-full mb-5" style={{ background: "linear-gradient(135deg, hsl(var(--tit-blue)), hsl(var(--tit-blue-light)))" }}>
+            <span className="text-4xl">💬</span>
           </div>
-          <h1 className="text-3xl font-bold text-primary-cipher tracking-tight">CipherChat</h1>
-          <p className="text-secondary-cipher mt-1 text-sm">Зашифрованный мессенджер</p>
+          <h1 className="text-3xl font-bold text-primary-cipher tracking-tight">Тут и Там</h1>
+          <p className="text-secondary-cipher mt-1 text-sm">Мессенджер нового поколения</p>
         </div>
 
         <div className="bg-panel rounded-2xl border border-subtle p-6">
@@ -68,7 +68,7 @@ const Auth = ({ onLogin }: AuthProps) => {
                   onChange={e => setDisplayName(e.target.value)}
                   placeholder="Ваше имя"
                   required
-                  className="w-full bg-deep border border-normal rounded-xl px-4 py-3 text-sm text-primary-cipher placeholder:text-muted-cipher focus:outline-none focus:border-[hsl(var(--accent-cyan))] transition"
+                  className="w-full bg-deep border border-normal rounded-xl px-4 py-3 text-sm text-primary-cipher placeholder:text-muted-cipher focus:outline-none focus:border-[hsl(var(--tit-blue))] transition"
                 />
               </div>
             )}
@@ -82,7 +82,7 @@ const Auth = ({ onLogin }: AuthProps) => {
                   placeholder="username"
                   required
                   maxLength={32}
-                  className="w-full bg-deep border border-normal rounded-xl pl-8 pr-4 py-3 text-sm text-primary-cipher placeholder:text-muted-cipher focus:outline-none focus:border-[hsl(var(--accent-cyan))] transition"
+                  className="w-full bg-deep border border-normal rounded-xl pl-8 pr-4 py-3 text-sm text-primary-cipher placeholder:text-muted-cipher focus:outline-none focus:border-[hsl(var(--tit-blue))] transition"
                 />
               </div>
             </div>
@@ -95,7 +95,7 @@ const Auth = ({ onLogin }: AuthProps) => {
                 placeholder="••••••••"
                 required
                 minLength={6}
-                className="w-full bg-deep border border-normal rounded-xl px-4 py-3 text-sm text-primary-cipher placeholder:text-muted-cipher focus:outline-none focus:border-[hsl(var(--accent-cyan))] transition"
+                className="w-full bg-deep border border-normal rounded-xl px-4 py-3 text-sm text-primary-cipher placeholder:text-muted-cipher focus:outline-none focus:border-[hsl(var(--tit-blue))] transition"
               />
             </div>
 
@@ -108,8 +108,8 @@ const Auth = ({ onLogin }: AuthProps) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 rounded-xl text-sm font-semibold mt-2 transition-all duration-200"
-              style={{ background: "hsl(var(--accent-cyan))", color: "hsl(var(--bg-deep))" }}
+              className="w-full py-3 rounded-xl text-sm font-semibold mt-2 transition-all duration-200 text-white"
+              style={{ background: "linear-gradient(135deg, hsl(var(--tit-blue)), hsl(var(--tit-blue-light)))" }}
             >
               {loading ? "Загрузка..." : mode === "login" ? "Войти" : "Создать аккаунт"}
             </button>

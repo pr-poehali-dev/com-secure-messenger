@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { User, Chat, Message } from "@/types/messenger";
 import Sidebar from "@/components/messenger/Sidebar";
 import ChatList from "@/components/messenger/ChatList";
 import ChatWindow from "@/components/messenger/ChatWindow";
+import BotChatWindow from "@/components/messenger/BotChatWindow";
+import Settings from "@/components/messenger/Settings";
 import Icon from "@/components/ui/icon";
 
 type Tab = "chats" | "contacts" | "search" | "profile" | "settings";
@@ -12,7 +14,19 @@ interface MessengerProps {
   onLogout: () => void;
 }
 
+const BOT_CHAT: Chat = {
+  id: "bot-sticker",
+  partnerId: "bot",
+  partnerName: "СтикерБот",
+  partnerUsername: "stickerbot",
+  partnerOnline: true,
+  lastMessage: "Создай свой первый стикерпак!",
+  lastMessageTime: new Date(Date.now() - 60000).toISOString(),
+  unreadCount: 1,
+};
+
 const DEMO_CHATS: Chat[] = [
+  BOT_CHAT,
   {
     id: "demo-1",
     partnerId: "u2",
@@ -84,6 +98,7 @@ const Messenger = ({ user, onLogout }: MessengerProps) => {
   const [chats] = useState<Chat[]>(DEMO_CHATS);
   const [messages, setMessages] = useState<Record<string, Message[]>>(DEMO_MESSAGES);
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentUser, setCurrentUser] = useState(user);
 
   const currentMessages = activeChat ? (messages[activeChat.id] || []) : [];
 
@@ -92,8 +107,8 @@ const Messenger = ({ user, onLogout }: MessengerProps) => {
     const msg: Message = {
       id: `msg-${Date.now()}`,
       chatId: activeChat.id,
-      senderId: user.id,
-      senderName: user.displayName,
+      senderId: currentUser.id,
+      senderName: currentUser.displayName,
       content,
       isEncrypted: true,
       createdAt: new Date().toISOString(),
@@ -102,7 +117,7 @@ const Messenger = ({ user, onLogout }: MessengerProps) => {
       ...prev,
       [activeChat.id]: [...(prev[activeChat.id] || []), msg],
     }));
-  }, [activeChat, user]);
+  }, [activeChat, currentUser]);
 
   const handleReact = useCallback((msgId: string) => {
     if (!activeChat) return;
@@ -118,89 +133,124 @@ const Messenger = ({ user, onLogout }: MessengerProps) => {
     }));
   }, [activeChat]);
 
-  const renderPanel = () => {
+  const handleUpdateUser = (upd: Partial<User>) => {
+    setCurrentUser(prev => ({ ...prev, ...upd }));
+  };
+
+  const isBot = activeChat?.id === "bot-sticker";
+
+  const filteredChats = chats.filter(c => {
+    if (!searchQuery) return true;
+    return c.partnerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.partnerUsername.toLowerCase().includes(searchQuery.toLowerCase());
+  });
+
+  const renderLeftPanel = () => {
     switch (activeTab) {
       case "chats":
         return (
           <div className="flex flex-col h-full">
-            <div className="px-3 py-3 border-b border-subtle flex-shrink-0">
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-subtle flex-shrink-0 flex items-center gap-2">
+              <span className="text-base font-bold text-primary-cipher flex-1">Тут и Там</span>
+              <button className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-elevated transition text-muted-cipher hover:text-primary-cipher">
+                <Icon name="PenSquare" size={17} />
+              </button>
+            </div>
+            <div className="px-3 py-2 flex-shrink-0">
               <div className="relative">
-                <Icon name="Search" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-cipher" />
+                <Icon name="Search" size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-cipher" />
                 <input
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Поиск чатов..."
-                  className="w-full bg-deep border border-normal rounded-xl pl-8 pr-4 py-2 text-sm text-primary-cipher placeholder:text-muted-cipher focus:outline-none focus:border-[hsl(var(--accent-cyan))] transition"
+                  placeholder="Поиск..."
+                  className="w-full bg-deep border border-normal rounded-xl pl-8 pr-4 py-2 text-sm text-primary-cipher placeholder:text-muted-cipher focus:outline-none focus:border-[hsl(var(--tit-blue))] transition"
                 />
               </div>
             </div>
             <div className="flex-1 min-h-0 py-1">
-              <ChatList
-                chats={chats.filter(c =>
-                  !searchQuery || c.partnerName.toLowerCase().includes(searchQuery.toLowerCase())
-                )}
+              <ChatListWithBot
+                chats={filteredChats}
                 activeChatId={activeChat?.id}
-                onSelect={setActiveChat}
+                onSelect={(c) => { setActiveChat(c); }}
               />
             </div>
           </div>
         );
+
       case "contacts":
         return (
           <div className="flex flex-col h-full">
-            <div className="px-4 py-4 border-b border-subtle">
-              <h2 className="text-base font-semibold text-primary-cipher">Контакты</h2>
+            <div className="px-4 py-3.5 border-b border-subtle flex items-center gap-3 flex-shrink-0">
+              <span className="text-base font-bold text-primary-cipher">Контакты</span>
+              <button className="ml-auto w-8 h-8 flex items-center justify-center rounded-xl hover:bg-elevated transition text-muted-cipher">
+                <Icon name="UserPlus" size={17} />
+              </button>
             </div>
             <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <Icon name="Users" size={32} className="text-muted-cipher mx-auto mb-2" />
-                <p className="text-secondary-cipher text-sm">Контакты появятся здесь</p>
+              <div className="text-center px-6">
+                <div className="w-16 h-16 rounded-full bg-elevated flex items-center justify-center mx-auto mb-3">
+                  <Icon name="Users" size={28} className="text-muted-cipher" />
+                </div>
+                <p className="text-sm text-secondary-cipher">Контакты появятся здесь</p>
+                <p className="text-xs text-muted-cipher mt-1">Найди людей через поиск по @юзернейму</p>
               </div>
             </div>
           </div>
         );
+
       case "search":
         return (
           <div className="flex flex-col h-full">
-            <div className="px-3 py-3 border-b border-subtle">
+            <div className="px-4 py-3.5 border-b border-subtle flex-shrink-0">
+              <span className="text-base font-bold text-primary-cipher">Поиск</span>
+            </div>
+            <div className="px-3 py-3">
               <div className="relative">
-                <Icon name="Search" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-cipher" />
+                <Icon name="Search" size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-cipher" />
                 <input
-                  placeholder="Поиск по юзернейму..."
-                  className="w-full bg-deep border border-normal rounded-xl pl-8 pr-4 py-2 text-sm text-primary-cipher placeholder:text-muted-cipher focus:outline-none focus:border-[hsl(var(--accent-cyan))] transition"
+                  autoFocus
+                  placeholder="@юзернейм или имя..."
+                  className="w-full bg-deep border border-normal rounded-xl pl-8 pr-4 py-2 text-sm text-primary-cipher placeholder:text-muted-cipher focus:outline-none focus:border-[hsl(var(--tit-blue))] transition"
                 />
               </div>
             </div>
             <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
+              <div className="text-center px-6">
                 <Icon name="Search" size={32} className="text-muted-cipher mx-auto mb-2" />
-                <p className="text-secondary-cipher text-sm">Введи @username для поиска</p>
+                <p className="text-sm text-secondary-cipher">Введи имя или @username</p>
               </div>
             </div>
           </div>
         );
+
       case "profile":
         return (
           <div className="flex flex-col h-full overflow-y-auto scrollbar-cipher">
+            <div className="px-4 py-3.5 border-b border-subtle flex-shrink-0">
+              <span className="text-base font-bold text-primary-cipher">Мой профиль</span>
+            </div>
             <div className="px-4 py-6 flex flex-col items-center gap-3 border-b border-subtle">
-              <div className="w-20 h-20 rounded-full bg-elevated flex items-center justify-center avatar-ring text-3xl font-bold text-primary-cipher overflow-hidden">
-                {user.avatarUrl
-                  ? <img src={user.avatarUrl} className="w-20 h-20 object-cover" />
-                  : <span>{user.displayName[0].toUpperCase()}</span>}
+              <div className="relative">
+                <div className="w-20 h-20 rounded-full bg-elevated flex items-center justify-center text-3xl font-bold text-primary-cipher overflow-hidden"
+                  style={{ boxShadow: "0 0 0 3px hsl(var(--bg-deep)), 0 0 0 5px hsl(var(--tit-blue)/0.5)" }}>
+                  {currentUser.avatarUrl
+                    ? <img src={currentUser.avatarUrl} className="w-20 h-20 object-cover" />
+                    : <span>{currentUser.displayName[0].toUpperCase()}</span>}
+                </div>
+                <button className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-[hsl(var(--tit-blue))] flex items-center justify-center">
+                  <Icon name="Camera" size={12} className="text-white" />
+                </button>
               </div>
               <div className="text-center">
-                <h2 className="text-lg font-bold text-primary-cipher">{user.displayName}</h2>
-                <p className="text-secondary-cipher text-sm">@{user.username}</p>
+                <h2 className="text-lg font-bold text-primary-cipher">{currentUser.displayName}</h2>
+                <p className="text-secondary-cipher text-sm">@{currentUser.username}</p>
               </div>
-              <button className="flex items-center gap-2 text-xs px-4 py-2 rounded-xl border border-normal hover:border-[hsl(var(--accent-cyan))] text-secondary-cipher transition">
-                <Icon name="Edit2" size={12} />
-                Редактировать профиль
-              </button>
             </div>
             <div className="px-4 py-4 space-y-3">
               <div className="bg-elevated rounded-xl p-3 border border-subtle">
                 <p className="text-xs text-muted-cipher mb-1">О себе</p>
-                <p className="text-sm text-secondary-cipher">{user.bio || "Описание не добавлено"}</p>
+                <p className="text-sm text-secondary-cipher">{currentUser.bio || "Описание не добавлено"}</p>
               </div>
               <div className="bg-elevated rounded-xl p-3 border border-subtle flex items-center gap-2">
                 <Icon name="ShieldCheck" size={14} className="accent-emerald" />
@@ -209,32 +259,27 @@ const Messenger = ({ user, onLogout }: MessengerProps) => {
                   <p className="text-xs text-muted-cipher">Все сообщения зашифрованы</p>
                 </div>
               </div>
+              <button
+                onClick={() => setActiveTab("settings")}
+                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl border border-normal hover:border-[hsl(var(--tit-blue))] text-secondary-cipher hover:text-primary-cipher transition text-sm"
+              >
+                <Icon name="Settings" size={15} />
+                Настройки
+                <Icon name="ChevronRight" size={14} className="ml-auto" />
+              </button>
             </div>
           </div>
         );
+
       case "settings":
         return (
-          <div className="flex flex-col h-full">
-            <div className="px-4 py-4 border-b border-subtle">
-              <h2 className="text-base font-semibold text-primary-cipher">Настройки</h2>
-            </div>
-            <div className="flex-1 overflow-y-auto scrollbar-cipher px-2 py-2 space-y-1">
-              {[
-                { icon: "Bell", label: "Уведомления" },
-                { icon: "Palette", label: "Оформление" },
-                { icon: "Shield", label: "Конфиденциальность" },
-                { icon: "Sticker", label: "Стикеры" },
-                { icon: "Smile", label: "Быстрые реакции" },
-              ].map(item => (
-                <button key={item.label} className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-elevated transition text-left">
-                  <Icon name={item.icon} size={18} className="text-secondary-cipher" />
-                  <span className="text-sm text-primary-cipher">{item.label}</span>
-                  <Icon name="ChevronRight" size={14} className="text-muted-cipher ml-auto" />
-                </button>
-              ))}
-            </div>
-          </div>
+          <Settings
+            user={currentUser}
+            onUpdate={handleUpdateUser}
+            onLogout={onLogout}
+          />
         );
+
       default:
         return null;
     }
@@ -242,31 +287,36 @@ const Messenger = ({ user, onLogout }: MessengerProps) => {
 
   return (
     <div className="flex h-full bg-deep">
-      <Sidebar user={user} activeTab={activeTab} onTab={setActiveTab} onLogout={onLogout} />
+      <Sidebar user={currentUser} activeTab={activeTab} onTab={setActiveTab} onLogout={onLogout} />
 
       {/* Left panel */}
       <div className="w-72 flex-shrink-0 border-r border-subtle flex flex-col h-full bg-panel">
-        {renderPanel()}
+        {renderLeftPanel()}
       </div>
 
       {/* Main area */}
-      <div className="flex-1 flex flex-col h-full">
+      <div className="flex-1 flex flex-col h-full bg-deep">
         {activeChat ? (
-          <ChatWindow
-            chat={activeChat}
-            currentUser={user}
-            messages={currentMessages}
-            onSend={handleSend}
-            onReact={handleReact}
-          />
+          isBot ? (
+            <BotChatWindow />
+          ) : (
+            <ChatWindow
+              chat={activeChat}
+              currentUser={currentUser}
+              messages={currentMessages}
+              onSend={handleSend}
+              onReact={handleReact}
+            />
+          )
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-8">
-            <div className="w-24 h-24 rounded-full bg-elevated flex items-center justify-center glow-cyan">
-              <Icon name="MessageCircle" size={40} className="accent-cyan" />
+          <div className="flex-1 flex flex-col items-center justify-center gap-5 text-center px-8">
+            <div className="w-28 h-28 rounded-full flex items-center justify-center text-6xl"
+              style={{ background: "linear-gradient(135deg, hsl(var(--tit-blue)/0.15), hsl(var(--tit-blue-light)/0.08))" }}>
+              💬
             </div>
             <div>
-              <h2 className="text-xl font-bold text-primary-cipher mb-1">CipherChat</h2>
-              <p className="text-secondary-cipher text-sm">Выбери чат для начала общения</p>
+              <h2 className="text-2xl font-bold text-primary-cipher mb-1">Тут и Там</h2>
+              <p className="text-secondary-cipher text-sm">Выбери чат, чтобы начать общение</p>
             </div>
             <div className="flex items-center gap-2 encrypt-badge rounded-xl px-4 py-2">
               <Icon name="Lock" size={13} className="accent-emerald" />
@@ -278,5 +328,75 @@ const Messenger = ({ user, onLogout }: MessengerProps) => {
     </div>
   );
 };
+
+// Кастомный рендер списка чатов с отличием бота
+interface ChatListWithBotProps {
+  chats: Chat[];
+  activeChatId?: string;
+  onSelect: (c: Chat) => void;
+}
+
+const timeLabel = (iso?: string) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const now = new Date();
+  const diff = now.getTime() - d.getTime();
+  if (diff < 86400000) return d.toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" });
+  if (diff < 604800000) return d.toLocaleDateString("ru", { weekday: "short" });
+  return d.toLocaleDateString("ru", { day: "numeric", month: "short" });
+};
+
+const ChatListWithBot = ({ chats, activeChatId, onSelect }: ChatListWithBotProps) => (
+  <div className="flex flex-col overflow-y-auto scrollbar-cipher h-full">
+    {chats.map((chat, i) => {
+      const isBot = chat.id === "bot-sticker";
+      return (
+        <button
+          key={chat.id}
+          onClick={() => onSelect(chat)}
+          className={`flex items-center gap-3 px-3 py-2.5 mx-1.5 rounded-xl transition-all duration-150 text-left animate-fade-in stagger-${Math.min(i + 1, 5)} ${activeChatId === chat.id ? "bg-[hsl(var(--tit-blue)/0.15)] border border-[hsl(var(--tit-blue)/0.2)]" : "hover:bg-elevated/60"}`}
+        >
+          <div className="relative flex-shrink-0">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-semibold overflow-hidden ${isBot ? "" : "bg-surface text-primary-cipher"}`}
+              style={isBot ? { background: "linear-gradient(135deg, hsl(var(--tit-blue)), hsl(var(--tit-blue-light)))" } : {}}>
+              {isBot ? (
+                <span className="text-xl">🤖</span>
+              ) : chat.partnerAvatar ? (
+                <img src={chat.partnerAvatar} className="w-12 h-12 object-cover" />
+              ) : (
+                <span>{chat.partnerName[0].toUpperCase()}</span>
+              )}
+            </div>
+            {chat.partnerOnline && (
+              <span className="absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-panel" />
+            )}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-0.5">
+              <div className="flex items-center gap-1 min-w-0">
+                <span className="text-sm font-semibold text-primary-cipher truncate">{chat.partnerName}</span>
+                {isBot && (
+                  <span className="text-[9px] px-1 py-0.5 rounded font-bold text-white flex-shrink-0"
+                    style={{ background: "hsl(var(--tit-blue))" }}>ОФ</span>
+                )}
+              </div>
+              <span className="text-xs text-muted-cipher flex-shrink-0 ml-1">{timeLabel(chat.lastMessageTime)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-secondary-cipher truncate">{chat.lastMessage || "Нет сообщений"}</span>
+              {(chat.unreadCount ?? 0) > 0 && (
+                <span className="ml-1 flex-shrink-0 min-w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold px-1.5 text-white"
+                  style={{ background: "hsl(var(--tit-blue))" }}>
+                  {chat.unreadCount}
+                </span>
+              )}
+            </div>
+          </div>
+        </button>
+      );
+    })}
+  </div>
+);
 
 export default Messenger;
